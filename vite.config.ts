@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 
-// GitHub Pages 用 base パス（リポジトリ名: rescue-sim）
+// 相対パス出力（GitHub Pages のリポジトリ名に依存せず、file:// でも動作）
 export default defineConfig({
-  base: '/rescue-sim/',
+  base: './',
   server: {
     host: true,
   },

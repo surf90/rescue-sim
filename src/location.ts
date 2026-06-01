@@ -41,7 +41,11 @@ export const HEADLAND = {
     width: 90, // 東西方向
     depth: 30, // 南北方向
     height: 1.5,
+    /** 先端の丸み（半円弧の半径目安） */
+    tipRadius: 15,
   },
+  /** 突堤の付け根テーパー量（陸側で東西方向に広がる幅） */
+  rootTaper: 4,
 } as const;
 
 /** 国道134号（参考表示・砂浜の北縁） */

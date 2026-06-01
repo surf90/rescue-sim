@@ -33,6 +33,22 @@
 - build/test結果：成功（JS 508KB / gzip 130KB、20 modules）
 - 補足：地形寸法は提供画像の比率を参考に概算。座標系は X=東西（+X東）、Z=南北（+Z内陸、-Z沖）
 
+### 2026-06-01 base パス相対化（公開URL空白問題の修正）
+- 変更内容：[vite.config.ts](vite.config.ts) の `base` を `/rescue-sim/` から `./` に変更。GitHub Pages 公開URLでアセット 404 になり 3D シーンが描画されなかった問題を解消
+- 変更ファイル：`vite.config.ts`
+- 確認したこと：`npm run build` 成功、`dist/index.html` の `<script>` / `<link>` が `./assets/...` の相対パスで出力されることを確認
+- build/test結果：成功（JS 508KB / gzip 130KB、20 modules）
+- 補足：リポジトリ名に依存しなくなったため、`file://` 直開きや任意サブパス配信でも動作する
+
+### 2026-06-01 地形リアル化（海岸線・ヘッドランド堤防の輪郭曲線化）
+- 変更内容：
+  - 砂浜と波打ち際を `PlaneGeometry` から `THREE.Shape` + `ShapeGeometry` に置換し、海側/内陸側エッジを正弦合成でうねらせた
+  - T字ヘッドランド堤防を `Box×2` から単一の `Shape` + `ExtrudeGeometry` に置換。先端を `absarc` の半円で丸め、付け根は `quadraticCurveTo` でテーパー
+  - `HEADLAND.head.tipRadius` / `HEADLAND.rootTaper` を `src/location.ts` に追加
+- 変更ファイル：`src/environment.ts`, `src/location.ts`
+- 確認したこと：`npm run build` 成功（JS 539KB / gzip 140KB、20 modules）。`EnvironmentRefs` シグネチャ維持で他モジュールへの波及なし
+- build/test結果：成功
+
 ## Current Task
 - タスク名：（次の作業待ち）
 - 目的：
