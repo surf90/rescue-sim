@@ -33,41 +33,42 @@ export function applyEnv(refs: WeatherRefs, state: EnvState) {
 
   // 季節 → 海面色
   const seaColor = {
-    spring: 0x3a8fb7,
-    summer: 0x1d6fa5,
-    autumn: 0x2a6f97,
-    winter: 0x1f4f7a,
+    spring: 0x5fc8de,
+    summer: 0x3fb6d4,
+    autumn: 0x4aa3c2,
+    winter: 0x6aa9c4,
   }[state.season];
   (env.ocean.material as THREE.MeshStandardMaterial).color.setHex(seaColor);
 
   // 天候 → 背景・フォグ・光源（沖までフォグが届かないよう遠端を拡大）
   switch (state.weather) {
     case 'clear':
-      scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
-      ambient.intensity = 0.7;
-      sun.intensity = 1.0;
-      sun.color.setHex(0xffffff);
+      scene.background = new THREE.Color(0xbfe7ff);
+      scene.fog = new THREE.Fog(0xbfe7ff, 260, 1000);
+      ambient.intensity = 0.5;
+      sun.intensity = 1.1;
+      sun.color.setHex(0xfff6e0);
       break;
     case 'cloudy':
-      scene.background = new THREE.Color(0xb8c2cc);
-      scene.fog = new THREE.Fog(0xb8c2cc, 180, 700);
-      ambient.intensity = 0.6;
-      sun.intensity = 0.5;
-      sun.color.setHex(0xf3f4f6);
+      scene.background = new THREE.Color(0xdfe7ee);
+      scene.fog = new THREE.Fog(0xdfe7ee, 220, 850);
+      ambient.intensity = 0.55;
+      sun.intensity = 0.65;
+      sun.color.setHex(0xfdfaf2);
       break;
     case 'rainy':
-      scene.background = new THREE.Color(0x6b7280);
-      scene.fog = new THREE.Fog(0x6b7280, 120, 500);
-      ambient.intensity = 0.45;
-      sun.intensity = 0.3;
-      sun.color.setHex(0xcbd5e1);
+      scene.background = new THREE.Color(0xa9b4be);
+      scene.fog = new THREE.Fog(0xa9b4be, 160, 600);
+      ambient.intensity = 0.5;
+      sun.intensity = 0.4;
+      sun.color.setHex(0xdce5ef);
       break;
     case 'foggy':
-      scene.background = new THREE.Color(0xd1d5db);
-      scene.fog = new THREE.Fog(0xd1d5db, 80, 320);
-      ambient.intensity = 0.55;
-      sun.intensity = 0.4;
+      scene.background = new THREE.Color(0xe7edf2);
+      scene.fog = new THREE.Fog(0xe7edf2, 100, 420);
+      ambient.intensity = 0.6;
+      sun.intensity = 0.5;
+      sun.color.setHex(0xffffff);
       break;
   }
 

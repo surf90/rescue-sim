@@ -4,8 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 /** Three.js のシーン基盤を初期化して返す */
 export function createScene(canvas: HTMLCanvasElement) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
+  scene.background = new THREE.Color(0xbfe7ff);
+  scene.fog = new THREE.Fog(0xbfe7ff, 260, 1000);
 
   const camera = new THREE.PerspectiveCamera(
     55,
@@ -32,9 +32,11 @@ export function createScene(canvas: HTMLCanvasElement) {
   controls.target.set(0, 0, -100);
 
   // 環境光と太陽光
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-  sun.position.set(30, 60, 20);
+  // 明るい屋外向け：HemisphereLight で空と地面方向の色味を分けて柔らかく
+  scene.add(new THREE.HemisphereLight(0xcfeeff, 0xf3e6c4, 0.85));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const sun = new THREE.DirectionalLight(0xfff6e0, 1.05);
+  sun.position.set(40, 80, 30);
   scene.add(sun);
 
   window.addEventListener('resize', () => {

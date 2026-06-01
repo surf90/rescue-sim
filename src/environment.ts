@@ -15,6 +15,10 @@ export interface EnvironmentRefs {
  * 海岸線エッジ点列（ワールド座標で返す）。
  * 突堤付け根（X が ±clampHalf 内）では揺らぎを 0 にクランプし、堤防側面と地続きにする。
  */
+/**
+ * 海岸線エッジ点列。低周波の合成正弦＋CatmullRom 補間で滑らかな曲線を得る。
+ * 突堤付け根（|x| < clampHalf）では揺らぎ 0 にして地続き接続。
+ */
 function shorelinePoints(
   worldZ: number,
   amplitude: number,
@@ -23,18 +27,24 @@ function shorelinePoints(
   clampHalf: number,
 ): THREE.Vector2[] {
   const halfW = BEACH.width / 2;
-  const pts: THREE.Vector2[] = [];
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
+  // 制御点（低密度・低周波）
+  const ctrlCount = 10;
+  const ctrl: THREE.Vector3[] = [];
+  for (let i = 0; i <= ctrlCount; i++) {
+    const t = i / ctrlCount;
     const x = -halfW + t * BEACH.width;
     const wobble =
-      Math.abs(x) < clampHalf
-        ? 0
-        : Math.sin(t * Math.PI * 3 + phase) * amplitude * 0.6 +
-          Math.sin(t * Math.PI * 7 + phase * 1.3) * amplitude * 0.4;
-    pts.push(new THREE.Vector2(x, worldZ + wobble));
+      Math.sin(t * Math.PI * 1.6 + phase) * amplitude * 0.7 +
+      Math.sin(t * Math.PI * 2.8 + phase * 1.3) * amplitude * 0.3;
+    ctrl.push(new THREE.Vector3(x, worldZ + wobble, 0));
   }
-  return pts;
+  const curve = new THREE.CatmullRomCurve3(ctrl, false, 'catmullrom', 0.5);
+  const sampled = curve.getPoints(segments);
+  // 付け根クランプ：実際の砂浜エッジ z へ強制
+  return sampled.map((p) => {
+    const z = Math.abs(p.x) < clampHalf ? worldZ : p.y;
+    return new THREE.Vector2(p.x, z);
+  });
 }
 
 /**
@@ -69,7 +79,7 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   // 海面（拡張された大きな矩形）
   const ocean = new THREE.Mesh(
     new THREE.PlaneGeometry(OCEAN.width, OCEAN.depth),
-    new THREE.MeshStandardMaterial({ color: 0x1d6fa5 }),
+    new THREE.MeshStandardMaterial({ color: 0x3fb6d4, roughness: 0.7, metalness: 0.15 }),
   );
   ocean.rotation.x = -Math.PI / 2;
   ocean.position.set(0, -0.02, OCEAN.centerZ);
@@ -84,29 +94,29 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   // 砂浜の海側/内陸側エッジ
   const seaEdgeZ = BEACH.centerZ - BEACH.depth / 2; // 海側 z=0
   const landEdgeZ = BEACH.centerZ + BEACH.depth / 2; // 内陸側 z=60
-  const seaEdge = shorelinePoints(seaEdgeZ, 1.8, 24, 0.7, clampHalf);
-  const landEdge = shorelinePoints(landEdgeZ, 0.8, 18, 2.1, 0);
+  const seaEdge = shorelinePoints(seaEdgeZ, 3.5, 96, 0.7, clampHalf);
+  const landEdge = shorelinePoints(landEdgeZ, 1.2, 80, 2.1, 0);
 
   // 砂浜 Shape: 海側 → 内陸側（逆順で閉じる）
   const beachOutline: THREE.Vector2[] = [];
   beachOutline.push(...seaEdge);
   for (let i = landEdge.length - 1; i >= 0; i--) beachOutline.push(landEdge[i]);
-  scene.add(makeFlatShape(beachOutline, 0xedd9a8, 0));
+  scene.add(makeFlatShape(beachOutline, 0xf6e3b0, 0));
 
   // 波打ち際（海側エッジの内側 2.5m の帯。付け根区間ではゼロ幅）
   const surfInner = seaEdge.map((p) => {
-    const inset = Math.abs(p.x) < clampHalf ? 0 : 2.5;
+    const inset = Math.abs(p.x) < clampHalf ? 0 : 4;
     return new THREE.Vector2(p.x, p.y + inset);
   });
   const surfOutline: THREE.Vector2[] = [];
   surfOutline.push(...seaEdge);
   for (let i = surfInner.length - 1; i >= 0; i--) surfOutline.push(surfInner[i]);
-  scene.add(makeFlatShape(surfOutline, 0xd6ecff, 0.01));
+  scene.add(makeFlatShape(surfOutline, 0xf2faff, 0.01));
 
   // プロムナード（駐車場帯）
   const promenade = new THREE.Mesh(
     new THREE.PlaneGeometry(PROMENADE.width, PROMENADE.depth),
-    new THREE.MeshStandardMaterial({ color: 0x9ca3af }),
+    new THREE.MeshStandardMaterial({ color: 0xdfe3ea }),
   );
   promenade.rotation.x = -Math.PI / 2;
   promenade.position.set(0, 0.02, PROMENADE.centerZ);
@@ -115,7 +125,7 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   // 国道134号
   const road = new THREE.Mesh(
     new THREE.PlaneGeometry(ROAD.width, ROAD.depth),
-    new THREE.MeshStandardMaterial({ color: 0x4b5563 }),
+    new THREE.MeshStandardMaterial({ color: 0x7a8493 }),
   );
   road.rotation.x = -Math.PI / 2;
   road.position.set(0, 0.03, ROAD.centerZ);
@@ -125,7 +135,8 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   // Shape はローカル xy 平面で組み、後で X 軸 -90° で床に倒す
   // ローカル座標: x = ワールドX（東西）、y = -ワールドZ（沖向き正）
   const blockMat = new THREE.MeshStandardMaterial({
-    color: 0x6b7280,
+    color: 0xc6ccd4,
+    roughness: 0.85,
     side: THREE.DoubleSide,
   });
   const stemRoot = -HEADLAND.stem.rootZ; // 陸側起点（=0）

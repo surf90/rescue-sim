@@ -61,6 +61,17 @@
 - 確認したこと：`npm run build` 成功（JS 536KB / gzip 139KB、20 modules）
 - build/test結果：成功
 
+### 2026-06-01 海岸線スムージング+明るい配色化
+- 変更内容：
+  - 海岸線曲線化: `shorelinePoints` を制御点 11 個 + `CatmullRomCurve3` (tension 0.5) に置換。サンプリング数を seaEdge 96 / landEdge 80 に増加。低周波 (π×1.6 / π×2.8) 合成で「実線をトレース」した滑らかな曲線に。突堤付け根クランプは維持
+  - 波打ち際幅 2.5m → 4m に拡張（明るい白帯が見えやすい）
+  - 配色を明るく更新: 砂浜 `#edd9a8`→`#f6e3b0`、波 `#d6ecff`→`#f2faff`、海面ベース `#1d6fa5`→`#3fb6d4`（roughness 0.7/metalness 0.15）、堤防 `#6b7280`→`#c6ccd4`、プロムナード `#9ca3af`→`#dfe3ea`、道路 `#4b5563`→`#7a8493`
+  - 天候配色を全体的に明度アップ: clear `#87ceeb`→`#bfe7ff`（フォグ 260/1000）、cloudy `#b8c2cc`→`#dfe7ee`、rainy `#6b7280`→`#a9b4be`、foggy `#d1d5db`→`#e7edf2`
+  - ライティング刷新: `HemisphereLight(0xcfeeff, 0xf3e6c4, 0.85)` を追加し、Ambient を 0.35 に下げ、Sun は暖色 `#fff6e0` で 1.05。屋外のクリアな見え方に
+  - 季節別海面色も明るい寒色系に再調整
+- 変更ファイル：`src/environment.ts`, `src/weather.ts`, `src/scene.ts`
+- build/test結果：成功（JS 537KB / gzip 139KB、20 modules）
+
 ## Current Task
 - タスク名：（次の作業待ち）
 - 目的：
