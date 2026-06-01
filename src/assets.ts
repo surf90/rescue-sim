@@ -11,19 +11,18 @@ export type AssetKey =
 
 export type AssetMap = Record<AssetKey, THREE.Object3D>;
 
-/** 各救助アセットを色分けされたローポリ形状で生成 */
+/** 救助アセット（victim除く）を生成。victim は victim.ts 経由で別途差し替え */
 export function createAssets(scene: THREE.Scene): AssetMap {
-  const assets: AssetMap = {
-    patrol: makeBox(0xef4444, 3, 1.2, 2, [-15, 0.6, 30]),
-    tube: makeBox(0xfb923c, 1.2, 0.4, 0.6, [-3, 0.2, 28]),
-    board: makeBox(0xfacc15, 0.8, 0.3, 3, [3, 0.15, 28]),
-    irb: makeBoat(0xe879f9, [10, 0.5, 30]),
-    pwc: makeBoat(0x22d3ee, [16, 0.5, 30]),
-    drone: makeDrone(0x4ade80, [-15, 0.5, 30]),
-    victim: makeVictim([0, 0.4, -25]),
+  const assets: Partial<AssetMap> = {
+    patrol: makeBox(0xef4444, 3.5, 1.4, 2.4, [-30, 0.7, 40]),
+    tube: makeBox(0xfb923c, 1.2, 0.4, 0.6, [-6, 0.2, 33]),
+    board: makeBox(0xfacc15, 0.8, 0.3, 3, [6, 0.15, 33]),
+    irb: makeBoat(0xe879f9, [20, 0.5, 36]),
+    pwc: makeBoat(0x22d3ee, [30, 0.5, 36]),
+    drone: makeDrone(0x4ade80, [-30, 0.5, 40]),
   };
-  Object.values(assets).forEach((m) => scene.add(m));
-  return assets;
+  Object.values(assets).forEach((m) => m && scene.add(m));
+  return assets as AssetMap;
 }
 
 function makeBox(
@@ -65,7 +64,6 @@ function makeDrone(color: number, pos: [number, number, number]) {
     new THREE.MeshStandardMaterial({ color }),
   );
   group.add(body);
-  // 4本のローター
   const armMat = new THREE.MeshStandardMaterial({ color: 0x1f2937 });
   [
     [0.9, 0, 0.9],
@@ -79,13 +77,4 @@ function makeDrone(color: number, pos: [number, number, number]) {
   });
   group.position.set(...pos);
   return group;
-}
-
-function makeVictim(pos: [number, number, number]) {
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.6, 16, 12),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }),
-  );
-  mesh.position.set(...pos);
-  return mesh;
 }

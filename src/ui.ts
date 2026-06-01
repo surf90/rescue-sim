@@ -1,22 +1,40 @@
-/** UIコントローラ：再生/停止/リセット、フェーズ表示、経過秒の更新 */
-export interface UIHandlers {
-  onPlay: () => void;
-  onPause: () => void;
-  onReset: () => void;
+/** DOM ヘルパ群（軽量・型安全寄り） */
+
+export function $<T extends HTMLElement = HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`#${id} not found`);
+  return el as T;
 }
 
-export function bindUI(h: UIHandlers) {
-  document.getElementById('play')?.addEventListener('click', h.onPlay);
-  document.getElementById('pause')?.addEventListener('click', h.onPause);
-  document.getElementById('reset')?.addEventListener('click', h.onReset);
+export function on<K extends keyof HTMLElementEventMap>(
+  id: string,
+  ev: K,
+  fn: (e: HTMLElementEventMap[K]) => void,
+) {
+  $(id).addEventListener(ev, fn as EventListener);
 }
 
-export function setPhase(label: string) {
-  const el = document.getElementById('phase');
-  if (el) el.textContent = label;
+export function setText(id: string, text: string) {
+  $(id).textContent = text;
 }
 
-export function setTime(sec: number) {
-  const el = document.getElementById('time');
-  if (el) el.textContent = sec.toFixed(1);
+/** ドロワー開閉（左上ナビボタンと連動） */
+export function setupDrawers() {
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.drawer-btn');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.drawer!;
+      const target = document.getElementById(`drawer-${key}`);
+      if (!target) return;
+      const willOpen = target.classList.contains('hidden');
+      document
+        .querySelectorAll('.drawer')
+        .forEach((d) => d.classList.add('hidden'));
+      if (willOpen) target.classList.remove('hidden');
+    });
+  });
+  // 背景タップで閉じる：シーンキャンバスをタップした時に閉じる
+  document.getElementById('scene')?.addEventListener('pointerdown', () => {
+    document.querySelectorAll('.drawer').forEach((d) => d.classList.add('hidden'));
+  });
 }

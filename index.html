@@ -4,39 +4,154 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0c4a6e" />
-    <title>救助連携シミュレーター</title>
+    <title>茅ヶ崎ヘッドランド 救助連携シミュレーター</title>
   </head>
-  <body class="bg-slate-900 text-white overflow-hidden">
+  <body class="bg-slate-900 text-white overflow-hidden select-none">
     <canvas id="scene" class="fixed inset-0 w-full h-full touch-none"></canvas>
 
     <!-- 上部：フェーズ表示 -->
-    <header class="fixed top-0 inset-x-0 p-3 pointer-events-none">
-      <div class="mx-auto max-w-md bg-black/50 backdrop-blur rounded-xl px-4 py-2 text-center pointer-events-auto">
-        <div class="text-xs text-cyan-300">現在フェーズ</div>
-        <div id="phase" class="text-base font-semibold">待機中</div>
+    <header class="fixed top-0 inset-x-0 p-2 pointer-events-none z-10">
+      <div class="mx-auto max-w-md bg-black/60 backdrop-blur rounded-xl px-4 py-2 text-center pointer-events-auto">
+        <div class="text-[10px] text-cyan-300">茅ヶ崎ヘッドランドビーチ · 現在フェーズ</div>
+        <div id="phase" class="text-sm font-semibold">待機中</div>
       </div>
     </header>
 
+    <!-- 左上：ドロワー開閉ボタン群 -->
+    <nav class="fixed top-16 left-2 flex flex-col gap-2 z-10">
+      <button data-drawer="scenario" class="drawer-btn bg-sky-600 active:bg-sky-700 rounded-lg px-3 py-2 text-xs font-semibold shadow">シナリオ</button>
+      <button data-drawer="victim" class="drawer-btn bg-rose-600 active:bg-rose-700 rounded-lg px-3 py-2 text-xs font-semibold shadow">要救助者</button>
+      <button data-drawer="env" class="drawer-btn bg-emerald-600 active:bg-emerald-700 rounded-lg px-3 py-2 text-xs font-semibold shadow">環境</button>
+      <button data-drawer="builder" class="drawer-btn bg-amber-600 active:bg-amber-700 rounded-lg px-3 py-2 text-xs font-semibold shadow">編集</button>
+    </nav>
+
     <!-- 凡例 -->
-    <aside class="fixed top-20 left-3 bg-black/50 backdrop-blur rounded-lg p-2 text-xs space-y-1">
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#ef4444"></span>本部</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#fb923c"></span>チューブ</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#facc15"></span>ボード</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#e879f9"></span>IRB</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#22d3ee"></span>PWC</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#4ade80"></span>ドローン</div>
-      <div><span class="inline-block w-3 h-3 rounded-sm align-middle mr-1" style="background:#ffffff"></span>溺者</div>
+    <aside class="fixed bottom-24 right-2 bg-black/50 backdrop-blur rounded-lg p-2 text-[10px] space-y-0.5 z-10">
+      <div><span class="legend" style="background:#ef4444"></span>本部</div>
+      <div><span class="legend" style="background:#fb923c"></span>チューブ</div>
+      <div><span class="legend" style="background:#facc15"></span>ボード</div>
+      <div><span class="legend" style="background:#e879f9"></span>IRB</div>
+      <div><span class="legend" style="background:#22d3ee"></span>PWC</div>
+      <div><span class="legend" style="background:#4ade80"></span>ドローン</div>
+      <div><span class="legend" style="background:#ffffff"></span>要救助者</div>
     </aside>
 
+    <!-- ドロワー：シナリオ -->
+    <section id="drawer-scenario" class="drawer hidden fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-slate-900/95 backdrop-blur p-4 overflow-y-auto z-20 shadow-2xl">
+      <h2 class="font-bold text-base mb-2">シナリオ</h2>
+      <label class="text-xs">プリセット/保存済</label>
+      <select id="scenario-select" class="w-full bg-slate-800 rounded p-2 mt-1 mb-2 text-sm"></select>
+      <div id="scenario-desc" class="text-xs text-slate-300 mb-3"></div>
+      <div class="grid grid-cols-3 gap-1 text-xs">
+        <button id="speed-1" class="bg-slate-700 rounded py-1">1x</button>
+        <button id="speed-2" class="bg-slate-700 rounded py-1">2x</button>
+        <button id="speed-4" class="bg-slate-700 rounded py-1">4x</button>
+      </div>
+      <hr class="my-3 border-slate-700" />
+      <div class="text-xs space-y-2">
+        <button id="export-json" class="w-full bg-slate-700 rounded py-2">JSON書き出し</button>
+        <label class="w-full bg-slate-700 rounded py-2 block text-center cursor-pointer">
+          JSON読み込み
+          <input id="import-json" type="file" accept="application/json" class="hidden" />
+        </label>
+        <button id="delete-scenario" class="w-full bg-rose-700 rounded py-2">このシナリオを削除（保存済のみ）</button>
+      </div>
+    </section>
+
+    <!-- ドロワー：要救助者 -->
+    <section id="drawer-victim" class="drawer hidden fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-slate-900/95 backdrop-blur p-4 overflow-y-auto z-20 shadow-2xl">
+      <h2 class="font-bold text-base mb-2">要救助者</h2>
+      <label class="text-xs">種別</label>
+      <select id="victim-type" class="w-full bg-slate-800 rounded p-2 mt-1 mb-3 text-sm">
+        <option value="swimmer">遊泳者</option>
+        <option value="surfer">サーファー</option>
+        <option value="sup">SUP</option>
+      </select>
+      <button id="pick-position" class="w-full bg-sky-600 rounded py-2 text-sm font-semibold">海面をタップして初期位置を指定</button>
+      <div class="text-xs text-slate-300 mt-2">現在位置: <span id="victim-pos">-</span></div>
+    </section>
+
+    <!-- ドロワー：環境 -->
+    <section id="drawer-env" class="drawer hidden fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-slate-900/95 backdrop-blur p-4 overflow-y-auto z-20 shadow-2xl">
+      <h2 class="font-bold text-base mb-2">環境設定</h2>
+      <label class="text-xs">季節</label>
+      <select id="season" class="w-full bg-slate-800 rounded p-2 mt-1 mb-3 text-sm">
+        <option value="spring">春</option>
+        <option value="summer">夏</option>
+        <option value="autumn">秋</option>
+        <option value="winter">冬</option>
+      </select>
+      <label class="text-xs">天候</label>
+      <select id="weather" class="w-full bg-slate-800 rounded p-2 mt-1 mb-3 text-sm">
+        <option value="clear">晴</option>
+        <option value="cloudy">曇</option>
+        <option value="rainy">雨</option>
+        <option value="foggy">霧</option>
+      </select>
+      <label class="text-xs">風向</label>
+      <select id="wind-dir" class="w-full bg-slate-800 rounded p-2 mt-1 mb-3 text-sm">
+        <option value="N">北</option><option value="NE">北東</option>
+        <option value="E">東</option><option value="SE">南東</option>
+        <option value="S">南</option><option value="SW">南西</option>
+        <option value="W">西</option><option value="NW">北西</option>
+      </select>
+      <label class="text-xs">風速 <span id="wind-speed-val">4</span> m/s</label>
+      <input id="wind-speed" type="range" min="0" max="20" step="1" value="4" class="w-full mt-1" />
+    </section>
+
+    <!-- ドロワー：編集（シナリオビルダー） -->
+    <section id="drawer-builder" class="drawer hidden fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-slate-900/95 backdrop-blur p-4 overflow-y-auto z-20 shadow-2xl">
+      <h2 class="font-bold text-base mb-2">シナリオ編集</h2>
+      <button id="new-scenario" class="w-full bg-emerald-600 rounded py-2 text-sm mb-2">新規シナリオ作成</button>
+      <button id="save-scenario" class="w-full bg-sky-600 rounded py-2 text-sm mb-3">現在のシナリオを保存</button>
+
+      <div class="border border-slate-700 rounded p-2 mb-3">
+        <label class="text-xs">名称</label>
+        <input id="scenario-name" type="text" class="w-full bg-slate-800 rounded p-1 mt-1 text-sm" />
+      </div>
+
+      <div class="border border-slate-700 rounded p-2 mb-3">
+        <label class="text-xs flex items-center gap-2">
+          <input id="edit-mode" type="checkbox" /> 配置モード（海面/砂浜をタップ）
+        </label>
+        <label class="text-xs mt-2 block">配置アセット</label>
+        <select id="edit-asset" class="w-full bg-slate-800 rounded p-1 mt-1 text-sm">
+          <option value="tube">チューブ</option>
+          <option value="board">ボード</option>
+          <option value="irb">IRB</option>
+          <option value="pwc">PWC</option>
+          <option value="drone">ドローン</option>
+          <option value="victim">要救助者</option>
+        </select>
+        <label class="text-xs mt-2 block">時刻 <span id="edit-time-val">0.0</span> 秒</label>
+        <input id="edit-time" type="range" min="0" max="30" step="0.5" value="0" class="w-full mt-1" />
+      </div>
+
+      <div>
+        <h3 class="text-xs font-semibold mb-1">イベント一覧</h3>
+        <ul id="event-list" class="text-[11px] space-y-1"></ul>
+      </div>
+
+      <div class="mt-3">
+        <h3 class="text-xs font-semibold mb-1">フェーズ追加</h3>
+        <div class="flex gap-1">
+          <input id="phase-time" type="number" step="0.5" placeholder="秒" class="w-16 bg-slate-800 rounded p-1 text-sm" />
+          <input id="phase-label" type="text" placeholder="ラベル" class="flex-1 bg-slate-800 rounded p-1 text-sm" />
+          <button id="add-phase" class="bg-emerald-600 rounded px-2 text-sm">追加</button>
+        </div>
+        <ul id="phase-list" class="text-[11px] space-y-1 mt-2"></ul>
+      </div>
+    </section>
+
     <!-- 下部：操作 -->
-    <footer class="fixed bottom-0 inset-x-0 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+    <footer class="fixed bottom-0 inset-x-0 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] z-10">
       <div class="mx-auto max-w-md flex gap-2 justify-center">
         <button id="play" class="flex-1 bg-emerald-500 active:bg-emerald-600 rounded-xl py-3 font-semibold touch-manipulation">再生</button>
-        <button id="pause" class="flex-1 bg-amber-500 active:bg-amber-600 rounded-xl py-3 font-semibold touch-manipulation">一時停止</button>
+        <button id="pause" class="flex-1 bg-amber-500 active:bg-amber-600 rounded-xl py-3 font-semibold touch-manipulation">停止</button>
         <button id="reset" class="flex-1 bg-slate-600 active:bg-slate-700 rounded-xl py-3 font-semibold touch-manipulation">リセット</button>
       </div>
-      <div class="mx-auto max-w-md mt-2 text-center text-xs text-slate-300">
-        経過 <span id="time">0.0</span> 秒
+      <div class="mx-auto max-w-md mt-1 text-center text-xs text-slate-300">
+        経過 <span id="time">0.0</span> 秒 / 速度 <span id="rate-val">1</span>x
       </div>
     </footer>
 

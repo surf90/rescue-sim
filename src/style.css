@@ -3,3 +3,12 @@
 @tailwind utilities;
 
 html, body { margin: 0; padding: 0; height: 100%; }
+
+.legend {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
