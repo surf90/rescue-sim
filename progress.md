@@ -48,6 +48,18 @@
 - 変更ファイル：`src/environment.ts`, `src/location.ts`
 - 確認したこと：`npm run build` 成功（JS 539KB / gzip 140KB、20 modules）。`EnvironmentRefs` シグネチャ維持で他モジュールへの波及なし
 - build/test結果：成功
+- 補足：このコミット（1e6c0f6）で砂浜 Mesh に `scale.z=-1` を当てたため法線が反転し描画消失（次タスクで修正）
+
+### 2026-06-01 スケール整合+表示回復+天候アニメ撤去
+- 変更内容：
+  - 表示回復: 砂浜/波打ち際の `scale.z=-1` を撤去し、Shape 構築時に y 符号を反転する方式に変更。砂浜/波打ち際/堤防マテリアルに `DoubleSide` を保険適用
+  - 実測スケール反映: `HEADLAND.stem.length` 120→200、`head.width` 90→180、`head.depth` 30→80、`head.tipRadius` 15→30、`stem.rootZ` -5→0、`rootTaper` 4→8（マップ実測 200m/379m に整合）
+  - 砂浜と突堤の地続き化: `shorelinePoints` に `clampHalf` を導入し、付け根 X 区間で揺らぎを 0 にクランプ
+  - 沖側ビュー拡大: `OCEAN` を 1400×900・centerZ -380 に拡張。カメラ far 500→1500、`maxDistance` 150→450、注視点 z=-100、初期位置 (0,200,200)、フォグ遠端 200/800
+  - 天候アニメ撤去: 雨パーティクル（`toggleRain`/`tickWeather`）と旗はためき（`Math.sin(now/200)`）を削除。背景・フォグ・光・旗向きの静的反映は維持
+- 変更ファイル：`src/location.ts`, `src/environment.ts`, `src/scene.ts`, `src/weather.ts`, `src/main.ts`
+- 確認したこと：`npm run build` 成功（JS 536KB / gzip 139KB、20 modules）
+- build/test結果：成功
 
 ## Current Task
 - タスク名：（次の作業待ち）
@@ -56,10 +68,10 @@
 - 完了条件：
 
 ## Known Issues
-- ヘッドランド堤防の寸法は概算値（[src/location.ts](src/location.ts)）。実地写真と比較した微調整が未実施
+- 既存プリセットシナリオ（[src/scenarios/](src/scenarios/)）の沖側ターゲットは旧スケール（z=-50〜-60）のまま。新堤防は z=-200 まで伸びるため、IRB/PWC が T 字ヘッド上に乗る配置になっている → シナリオ座標を新スケールに沿って再配置する別タスクが必要
 - ビルド時に chunk size 警告（500KB 超）。Three.js が大半。dynamic import で分割の余地あり
 - 編集モードのピック対象は海面のみ。砂浜上のアセット配置（本部周辺の出動準備位置）はクリックで置けない
-- 風・天候は「見た目のみ」反映で、アセット/要救助者の漂流計算はしない（方針として確定）
+- 風・天候は「静的な見た目のみ」反映で、アセット/要救助者の漂流計算はしない（方針として確定）。雨/旗はためきのアニメは撤去済み
 - スマホ実機でのフレームレート・タッチ感度の計測未実施
 
 ## Design Decisions

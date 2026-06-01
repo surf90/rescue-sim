@@ -11,35 +11,54 @@ export interface EnvironmentRefs {
   flagPole: THREE.Mesh;
 }
 
-/** 海岸線のような緩やかにうねるエッジ点列を生成（x,z 平面） */
+/**
+ * 海岸線エッジ点列（ワールド座標で返す）。
+ * 突堤付け根（X が ±clampHalf 内）では揺らぎを 0 にクランプし、堤防側面と地続きにする。
+ */
 function shorelinePoints(
-  z: number,
+  worldZ: number,
   amplitude: number,
   segments: number,
   phase: number,
+  clampHalf: number,
 ): THREE.Vector2[] {
   const halfW = BEACH.width / 2;
   const pts: THREE.Vector2[] = [];
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const x = -halfW + t * BEACH.width;
-    // 複数周波数の正弦波で自然な揺らぎを作る
     const wobble =
-      Math.sin(t * Math.PI * 3 + phase) * amplitude * 0.6 +
-      Math.sin(t * Math.PI * 7 + phase * 1.3) * amplitude * 0.4;
-    pts.push(new THREE.Vector2(x, z + wobble));
+      Math.abs(x) < clampHalf
+        ? 0
+        : Math.sin(t * Math.PI * 3 + phase) * amplitude * 0.6 +
+          Math.sin(t * Math.PI * 7 + phase * 1.3) * amplitude * 0.4;
+    pts.push(new THREE.Vector2(x, worldZ + wobble));
   }
   return pts;
 }
 
-/** 多角形 Shape を地表に倒して配置するメッシュを作る */
+/**
+ * ワールド XZ 平面（床面）に水平に張る Shape メッシュを作る。
+ * Shape は xy 平面で組み、引数の点列は (x = ワールドX, y = ワールドZ) として渡す。
+ * 内部で y → -y に反転してから ShapeGeometry に渡し、rotation.x = -PI/2 で
+ * ワールド +Z 方向に正しくマップされるようにする（scale 反転を使わず法線維持）。
+ */
 function makeFlatShape(
-  shape: THREE.Shape,
+  outline: THREE.Vector2[],
   color: number,
   y: number,
 ): THREE.Mesh {
+  const shape = new THREE.Shape();
+  shape.moveTo(outline[0].x, -outline[0].y);
+  for (let i = 1; i < outline.length; i++) {
+    shape.lineTo(outline[i].x, -outline[i].y);
+  }
+  shape.closePath();
   const geom = new THREE.ShapeGeometry(shape);
-  const mat = new THREE.MeshStandardMaterial({ color });
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    side: THREE.DoubleSide,
+  });
   const mesh = new THREE.Mesh(geom, mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = y;
@@ -47,7 +66,7 @@ function makeFlatShape(
 }
 
 export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
-  // 海面（広い矩形のまま。砂浜エッジが上に重なるため境界は隠れる）
+  // 海面（拡張された大きな矩形）
   const ocean = new THREE.Mesh(
     new THREE.PlaneGeometry(OCEAN.width, OCEAN.depth),
     new THREE.MeshStandardMaterial({ color: 0x1d6fa5 }),
@@ -57,45 +76,32 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   ocean.name = 'ocean';
   scene.add(ocean);
 
-  // 砂浜の海側/内陸側エッジ（うねりあり）
-  const seaEdgeZ = BEACH.centerZ - BEACH.depth / 2; // 海側
-  const landEdgeZ = BEACH.centerZ + BEACH.depth / 2; // 内陸側
-  const seaEdge = shorelinePoints(seaEdgeZ, 1.8, 24, 0.7);
-  const landEdge = shorelinePoints(landEdgeZ, 0.8, 18, 2.1);
+  // 突堤付け根のクランプ範囲（砂浜と地続きにする）
+  const stemHalf = HEADLAND.stem.width / 2;
+  const taper = HEADLAND.rootTaper;
+  const clampHalf = stemHalf + taper + 1;
 
-  // 砂浜 Shape（Shape は xy 平面 → 倒して z 平面に）
-  const beachShape = new THREE.Shape();
-  beachShape.moveTo(seaEdge[0].x, seaEdge[0].y);
-  for (let i = 1; i < seaEdge.length; i++) {
-    beachShape.lineTo(seaEdge[i].x, seaEdge[i].y);
-  }
-  for (let i = landEdge.length - 1; i >= 0; i--) {
-    beachShape.lineTo(landEdge[i].x, landEdge[i].y);
-  }
-  beachShape.closePath();
-  const beach = makeFlatShape(beachShape, 0xedd9a8, 0);
-  // ShapeGeometry は xy 平面で生成され rotation.x=-PI/2 で xz 床面に倒すと
-  // y(2D) -> z(3D) のマッピングが反転する。砂浜の Z 値はそのまま使いたいので
-  // 倒した後にスケール反転で整合させる
-  beach.scale.z = -1;
-  scene.add(beach);
+  // 砂浜の海側/内陸側エッジ
+  const seaEdgeZ = BEACH.centerZ - BEACH.depth / 2; // 海側 z=0
+  const landEdgeZ = BEACH.centerZ + BEACH.depth / 2; // 内陸側 z=60
+  const seaEdge = shorelinePoints(seaEdgeZ, 1.8, 24, 0.7, clampHalf);
+  const landEdge = shorelinePoints(landEdgeZ, 0.8, 18, 2.1, 0);
 
-  // 波打ち際（海側エッジの内側 2.5m の帯）
-  const surfInner = seaEdge.map(
-    (p) => new THREE.Vector2(p.x, p.y + 2.5),
-  );
-  const surfShape = new THREE.Shape();
-  surfShape.moveTo(seaEdge[0].x, seaEdge[0].y);
-  for (let i = 1; i < seaEdge.length; i++) {
-    surfShape.lineTo(seaEdge[i].x, seaEdge[i].y);
-  }
-  for (let i = surfInner.length - 1; i >= 0; i--) {
-    surfShape.lineTo(surfInner[i].x, surfInner[i].y);
-  }
-  surfShape.closePath();
-  const surf = makeFlatShape(surfShape, 0xd6ecff, 0.01);
-  surf.scale.z = -1;
-  scene.add(surf);
+  // 砂浜 Shape: 海側 → 内陸側（逆順で閉じる）
+  const beachOutline: THREE.Vector2[] = [];
+  beachOutline.push(...seaEdge);
+  for (let i = landEdge.length - 1; i >= 0; i--) beachOutline.push(landEdge[i]);
+  scene.add(makeFlatShape(beachOutline, 0xedd9a8, 0));
+
+  // 波打ち際（海側エッジの内側 2.5m の帯。付け根区間ではゼロ幅）
+  const surfInner = seaEdge.map((p) => {
+    const inset = Math.abs(p.x) < clampHalf ? 0 : 2.5;
+    return new THREE.Vector2(p.x, p.y + inset);
+  });
+  const surfOutline: THREE.Vector2[] = [];
+  surfOutline.push(...seaEdge);
+  for (let i = surfInner.length - 1; i >= 0; i--) surfOutline.push(surfInner[i]);
+  scene.add(makeFlatShape(surfOutline, 0xd6ecff, 0.01));
 
   // プロムナード（駐車場帯）
   const promenade = new THREE.Mesh(
@@ -116,53 +122,49 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   scene.add(road);
 
   // ヘッドランド堤防（Shape + ExtrudeGeometry で T 字＋丸先端を一体生成）
-  // Shape はローカル xy 平面で組み、後で X 軸回転して床に倒す
-  // ローカル座標: x = ワールドX（東西）、y = ワールド -Z（沖向き正）
-  const blockMat = new THREE.MeshStandardMaterial({ color: 0x6b7280 });
-  const stemHalf = HEADLAND.stem.width / 2;
-  const stemRoot = -HEADLAND.stem.rootZ; // 陸側起点（ローカル y 増加が沖方向）
-  const stemTip = stemRoot + HEADLAND.stem.length; // 沖側終端
-  const taper = HEADLAND.rootTaper;
+  // Shape はローカル xy 平面で組み、後で X 軸 -90° で床に倒す
+  // ローカル座標: x = ワールドX（東西）、y = -ワールドZ（沖向き正）
+  const blockMat = new THREE.MeshStandardMaterial({
+    color: 0x6b7280,
+    side: THREE.DoubleSide,
+  });
+  const stemRoot = -HEADLAND.stem.rootZ; // 陸側起点（=0）
+  const stemTip = stemRoot + HEADLAND.stem.length; // 沖側終端（=200）
   const headHalf = HEADLAND.head.width / 2;
-  const headFront = stemTip + HEADLAND.head.depth - HEADLAND.head.tipRadius - 4;
-  // ↑ -4 は旧コードのオフセットと整合させ既存配置を維持
-  const headBack = stemTip - 2;
+  const headBack = stemTip; // T字の陸側エッジ
+  const headFront = stemTip + HEADLAND.head.depth - HEADLAND.head.tipRadius;
+  const tipR = HEADLAND.head.tipRadius;
 
   const headland = new THREE.Shape();
-  // 陸側付け根 左 → わずかに広げる
+  // 陸側付け根 左
   headland.moveTo(-stemHalf - taper, stemRoot);
-  // 突堤左エッジ（quadraticで滑らかに細る）
+  // 突堤左エッジ（quadratic で滑らかに細る）
   headland.quadraticCurveTo(
     -stemHalf - taper * 0.4,
-    stemRoot + 8,
+    stemRoot + 12,
     -stemHalf,
-    stemRoot + 14,
+    stemRoot + 22,
   );
   headland.lineTo(-stemHalf, headBack);
   // T字ヘッド 左の張り出し
-  headland.lineTo(-headHalf + HEADLAND.head.tipRadius, headBack);
-  headland.quadraticCurveTo(
-    -headHalf,
-    headBack,
-    -headHalf,
-    headBack + HEADLAND.head.tipRadius,
-  );
+  headland.lineTo(-headHalf + tipR, headBack);
+  headland.quadraticCurveTo(-headHalf, headBack, -headHalf, headBack + tipR);
   headland.lineTo(-headHalf, headFront);
   // 先端を半円弧で丸める
   headland.absarc(0, headFront, headHalf, Math.PI, 0, true);
   // 右側を対称に戻す
-  headland.lineTo(headHalf, headBack + HEADLAND.head.tipRadius);
+  headland.lineTo(headHalf, headBack + tipR);
   headland.quadraticCurveTo(
     headHalf,
     headBack,
-    headHalf - HEADLAND.head.tipRadius,
+    headHalf - tipR,
     headBack,
   );
   headland.lineTo(stemHalf, headBack);
-  headland.lineTo(stemHalf, stemRoot + 14);
+  headland.lineTo(stemHalf, stemRoot + 22);
   headland.quadraticCurveTo(
     stemHalf + taper * 0.4,
-    stemRoot + 8,
+    stemRoot + 12,
     stemHalf + taper,
     stemRoot,
   );
@@ -176,11 +178,10 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
     bevelSegments: 1,
     curveSegments: 18,
   });
-  // ExtrudeGeometry は z 方向に押し出す。床に立てるには X 軸 -90° 回転。
-  // その上で y 軸方向（ローカル沖方向）をワールド -Z に合わせる
   const headlandMesh = new THREE.Mesh(headlandGeom, blockMat);
+  // ローカル xy（押し出し +z）→ ワールド xz（押し出し +y）に倒す
+  // ローカル y（沖方向正）→ ワールド -z（沖方向）。rotation.x=-PI/2 で達成
   headlandMesh.rotation.x = -Math.PI / 2;
-  // 倒した後 ローカル y → ワールド -Z、押し出し方向（旧+z）→ ワールド +Y
   headlandMesh.position.y = 0;
   scene.add(headlandMesh);
 
@@ -200,7 +201,7 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentRefs {
   flagPole.position.set(-30, 3, 38);
   scene.add(flagPole);
 
-  // 旗本体
+  // 旗本体（風向きの静的表示）
   const flagGeom = new THREE.PlaneGeometry(3, 1.5);
   flagGeom.translate(1.5, 0, 0); // ピボットを左端に
   const flag = new THREE.Mesh(

@@ -5,15 +5,15 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 export function createScene(canvas: HTMLCanvasElement) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
-  scene.fog = new THREE.Fog(0x87ceeb, 80, 200);
+  scene.fog = new THREE.Fog(0x87ceeb, 200, 800);
 
   const camera = new THREE.PerspectiveCamera(
     55,
     window.innerWidth / window.innerHeight,
     0.1,
-    500,
+    1500,
   );
-  camera.position.set(0, 45, 55);
+  camera.position.set(0, 200, 200);
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -27,9 +27,9 @@ export function createScene(canvas: HTMLCanvasElement) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.maxPolarAngle = Math.PI / 2.1;
-  controls.minDistance = 20;
-  controls.maxDistance = 150;
-  controls.target.set(0, 0, -10);
+  controls.minDistance = 25;
+  controls.maxDistance = 450;
+  controls.target.set(0, 0, -100);
 
   // 環境光と太陽光
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));

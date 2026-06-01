@@ -20,7 +20,7 @@ import {
   type WindDir,
   type VictimType,
 } from './environment-state';
-import { applyEnv, collectWeatherRefs, tickWeather } from './weather';
+import { applyEnv, collectWeatherRefs } from './weather';
 import {
   loadCustomScenarios,
   saveCustomScenarios,
@@ -364,14 +364,6 @@ function tick() {
     updateScenario(elapsed, assets, activeScenario);
     setText('phase', currentPhase(elapsed, activeScenario));
     setText('time', elapsed.toFixed(1));
-  }
-
-  tickWeather(weatherRefs, dt);
-
-  // 旗のはためき（時間ベース）
-  if (envRefs.flag) {
-    const base = envRefs.flag.rotation.z;
-    envRefs.flag.rotation.z = base + Math.sin(now / 200) * 0.02 * (env.windSpeed / 10);
   }
 
   controls.update();
