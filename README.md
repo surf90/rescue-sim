@@ -16,9 +16,29 @@
 - **イベント一覧** — 時系列でのできごとを確認する
 - **保存・共有** — シナリオを JSON で書き出し／読み込みする
 
+## データの扱い
+
+- 作成したシナリオはブラウザの localStorage（キー `rescue-sim:custom-scenarios:v1`）にだけ保存し、外部へ送信しません。別の端末やブラウザとは共有されないため、共有には JSON の書き出し／読み込みを使ってください。
+- 3D 描画には [three.js](https://threejs.org/)（npm パッケージをビルドに同梱）を使います。閲覧中に外部 API や CDN へは接続しません。
+
+## 開発
+
+```bash
+npm ci
+npm run dev     # 開発サーバー
+npm run build   # 型チェック（tsc）とビルド
+```
+
+`main` への push で `.github/workflows/` のワークフローがビルドし、GitHub Pages に公開します。
+変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
+
 ## 注記
 
 - 本ツールはサーフ90茅ヶ崎ライフセービングクラブの公式なものではありません。
   メンバー個人が開発・管理しています。
 - 画面上の挙動は検討用の簡略モデルです。実際の救助判断は、必ず現場の状況と
   指揮系統に従ってください。
+
+## ライセンス
+
+MIT License © 2026 surf90（[LICENSE](LICENSE)）
