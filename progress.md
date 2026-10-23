@@ -87,6 +87,7 @@
 
 ## Maintenance Log
 - 2026-10-06: vite 5 → 8.3.2（開発サーバーの `server.fs.deny` 回避・パストラバーサル、esbuild の開発サーバー問題に対応。`npm run dev` は `--host` で LAN に公開するため影響あり）。`npm run build` 通過。`npm audit` に残る high は tailwindcss 3 が引く braces / chokidar 系（braces は全バージョン対象で修正版なし、開発依存のみ）。Tailwind 4 への移行は設定の書き換えが必要なため未実施
+- 2026-10-23: vite 8.3.2 → 8.3.5（CVE-2026-112942/112943/112944）。postcss-selector-parser は `overrides` で 7.1.6 以上に固定（CVE-2026-104844、Tailwind 3 が 6.x を引くため）。生成 CSS は変更前と同一。Dependabot PR #1（Tailwind 4 化）はビルドが失敗するため取り込まない。デプロイの `npm install` を `npm ci` に変更（lock ファイルどおりに入れる）。`npm run build` 通過
 ## Design Decisions
 - ロケーションは茅ヶ崎ヘッドランドビーチ（35.31688, 139.41601）に固定
 - 地形は抽象ローポリで再現（衛星画像テクスチャは使わない／軽量・編集容易を優先）
